@@ -5,6 +5,7 @@ import { EyeIcon, EyeSlashIcon, SparklesIcon } from '@heroicons/react/24/outline
 import { useAuth } from '../contexts/AuthContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 import GlassCard from '../components/GlassCard';
+import axios from 'axios';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -34,13 +35,27 @@ const RegisterPage: React.FC = () => {
       alert('Please enter your email address');
       return;
     }
-    
+
     setIsSendingCode(true);
-    // Simulate sending verification code
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsCodeSent(true);
-    setIsSendingCode(false);
-    setStep('verification');
+    try {
+      const res = await axios.post('http://localhost:5000/api/register/send-code', {
+        email: formData.email,
+        name: formData.name,
+        password: formData.password,
+      });
+
+      if (res.data.success) {
+        setIsCodeSent(true);
+        setStep('verification');
+      } else {
+        alert(res.data.message || 'Failed to send code');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error sending verification code');
+    } finally {
+      setIsSendingCode(false);
+    }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -58,17 +73,27 @@ const RegisterPage: React.FC = () => {
       alert('Please enter the verification code');
       return;
     }
-    if (formData.verificationCode !== '123456') {
-      alert('Invalid verification code. Please try again.');
-      return;
-    }
+
     try {
-      await register(formData.name, formData.email, formData.password);
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Registration failed:', error);
+      const res = await axios.post('http://localhost:5000/api/register/verify-code', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        code: formData.verificationCode,
+      });
+
+      if (res.data.success && res.data.token) {
+        sessionStorage.setItem('jwtToken', res.data.token);
+        navigate('/dashboard');
+      } else {
+        alert(res.data.message || 'Invalid code');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Registration failed');
     }
   };
+
 
   const handleBackToForm = () => {
     setStep('form');
@@ -78,7 +103,7 @@ const RegisterPage: React.FC = () => {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 py-8">
       <AnimatedBackground />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -100,7 +125,7 @@ const RegisterPage: React.FC = () => {
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-white mb-2">Let's get you hired.</h2>
             <p className="text-gray-400">
-              {step === 'form' 
+              {step === 'form'
                 ? 'Create your account and start your journey'
                 : 'Enter the verification code sent to your email'
               }
