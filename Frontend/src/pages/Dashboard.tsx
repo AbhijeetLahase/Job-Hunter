@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  CloudArrowUpIcon, 
+import {
+  CloudArrowUpIcon,
   DocumentTextIcon,
   BriefcaseIcon,
   MapPinIcon,
@@ -62,20 +62,48 @@ const Dashboard: React.FC = () => {
     }
   ];
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setUploadedFile(file);
-      setIsAnalyzing(true);
-      
-      // Simulate AI analysis
-      setTimeout(() => {
-        setExtractedSkills(mockSkills);
-        setMatchedJobs(mockJobs);
-        setIsAnalyzing(false);
-      }, 2000);
+    if (!file) return;
+
+    setUploadedFile(file);
+    setIsAnalyzing(true);
+
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/file/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      // console.log('Extracted skills:', data.skills);
+      if (data.skills) {
+        setExtractedSkills(data.skills);
+        try {
+          const skillsQuery = data.skills.join(',');
+          const jobsResponse = await fetch(`http://localhost:5000/api/job/getjobs?skills=${skillsQuery}`);
+          const jobsData = await jobsResponse.json();
+          console.log('Matched jobs:', jobsData.jobs);
+          setMatchedJobs(jobsData.jobs || []);
+        } catch (jobError) {
+          console.error('Error fetching jobs:', jobError);
+          setMatchedJobs([]);
+        }
+      } else {
+        setExtractedSkills([]);
+      }
+    } catch (error) {
+      console.error('Resume analysis failed:', error);
+      setExtractedSkills([]);
     }
+
+    setIsAnalyzing(false);
   };
+
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -87,7 +115,7 @@ const Dashboard: React.FC = () => {
     if (file && file.type === 'application/pdf') {
       setUploadedFile(file);
       setIsAnalyzing(true);
-      
+
       // Simulate AI analysis
       setTimeout(() => {
         setExtractedSkills(mockSkills);
@@ -101,7 +129,7 @@ const Dashboard: React.FC = () => {
     <div className="relative min-h-screen">
       <AnimatedBackground />
       <Sidebar />
-      
+
       <div className="ml-64 p-8 relative z-10">
         {/* Header */}
         <motion.div
@@ -116,7 +144,7 @@ const Dashboard: React.FC = () => {
               </h1>
               <p className="text-gray-400">Ready to find your dream job?</p>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <img
                 src={user?.avatar}
@@ -136,7 +164,7 @@ const Dashboard: React.FC = () => {
         >
           <GlassCard className="p-8">
             <h2 className="text-xl font-bold text-white mb-6">Upload Your Resume</h2>
-            
+
             <div
               className="border-2 border-dashed border-blue-500/30 rounded-2xl p-12 text-center hover:border-blue-500/50 hover:bg-blue-500/5 transition-all duration-300"
               onDragOver={handleDragOver}
@@ -211,7 +239,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 <h2 className="text-xl font-bold text-white">Extracted Skills</h2>
               </div>
-              
+
               <div className="flex flex-wrap gap-3">
                 {extractedSkills.map((skill, index) => (
                   <motion.span
@@ -242,7 +270,7 @@ const Dashboard: React.FC = () => {
               </div>
               <h2 className="text-2xl font-bold text-white">Matched Jobs</h2>
             </div>
-            
+
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
               {matchedJobs.map((job, index) => (
                 <motion.div
@@ -261,7 +289,7 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3 mb-4">
                       <div className="flex items-center gap-2 text-gray-300 text-sm">
                         <MapPinIcon className="w-4 h-4" />
@@ -276,7 +304,7 @@ const Dashboard: React.FC = () => {
                         {job.salary}
                       </div>
                     </div>
-                    
+
                     <div className="mb-6">
                       <p className="text-gray-400 text-xs mb-2">Required Skills:</p>
                       <div className="flex flex-wrap gap-2">
@@ -290,7 +318,7 @@ const Dashboard: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    
+
                     <motion.button
                       className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
                       whileHover={{ scale: 1.02 }}

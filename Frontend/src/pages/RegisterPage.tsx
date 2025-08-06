@@ -38,7 +38,7 @@ const RegisterPage: React.FC = () => {
 
     setIsSendingCode(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/register/send-code', {
+      const res = await axios.post('http://localhost:5000/api/auth/register/send-code', {
         email: formData.email,
         name: formData.name,
         password: formData.password,
@@ -75,7 +75,7 @@ const RegisterPage: React.FC = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/api/register/verify-code', {
+      const res = await axios.post('http://localhost:5000/api/auth/register/verify-code', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
