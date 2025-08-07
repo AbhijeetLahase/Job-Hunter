@@ -22,6 +22,11 @@ interface Job {
   type: string;
   salary: string;
   skills: string[];
+  applyLink: string | null;
+  applyOptions?: {
+    publisher: string;
+    apply_link: string;
+  }[];
 }
 
 const Dashboard: React.FC = () => {
@@ -31,36 +36,6 @@ const Dashboard: React.FC = () => {
   const [extractedSkills, setExtractedSkills] = useState<string[]>([]);
   const [matchedJobs, setMatchedJobs] = useState<Job[]>([]);
 
-  const mockSkills = ['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'Docker', 'GraphQL', 'MongoDB'];
-  const mockJobs: Job[] = [
-    {
-      id: '1',
-      title: 'Senior Frontend Developer',
-      company: 'TechCorp Inc.',
-      location: 'San Francisco, CA',
-      type: 'Full-time',
-      salary: '$120k - $160k',
-      skills: ['React', 'TypeScript', 'GraphQL']
-    },
-    {
-      id: '2',
-      title: 'Full Stack Engineer',
-      company: 'StartupXYZ',
-      location: 'Remote',
-      type: 'Full-time',
-      salary: '$100k - $140k',
-      skills: ['Node.js', 'React', 'MongoDB']
-    },
-    {
-      id: '3',
-      title: 'DevOps Engineer',
-      company: 'CloudFlow',
-      location: 'Austin, TX',
-      type: 'Full-time',
-      salary: '$110k - $150k',
-      skills: ['AWS', 'Docker', 'Python']
-    }
-  ];
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -117,11 +92,11 @@ const Dashboard: React.FC = () => {
       setIsAnalyzing(true);
 
       // Simulate AI analysis
-      setTimeout(() => {
-        setExtractedSkills(mockSkills);
-        setMatchedJobs(mockJobs);
-        setIsAnalyzing(false);
-      }, 2000);
+      // setTimeout(() => {
+      //   setExtractedSkills(mockSkills);
+      //   setMatchedJobs(mockJobs);
+      //   setIsAnalyzing(false);
+      // }, 2000);
     }
   };
 
@@ -319,13 +294,21 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <motion.button
-                      className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl text-white font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Apply →
-                    </motion.button>
+                    {Array.isArray(job.applyOptions) && job.applyOptions.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {job.applyOptions.map((option, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => window.open(option.apply_link, '_blank')}
+                            className="w-full text-sm text-blue-300 underline hover:text-blue-400 transition"
+                          >
+                            Apply via {option.publisher}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+
                   </GlassCard>
                 </motion.div>
               ))}

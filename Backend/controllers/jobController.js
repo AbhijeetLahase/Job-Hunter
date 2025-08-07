@@ -39,7 +39,9 @@ const getJobs = async (req, res) => {
         : 'Not disclosed',
       skills: skillsArray.filter(skill =>
         job.job_description?.toLowerCase().includes(skill.toLowerCase())
-      )
+      ),
+      applyLink: job.job_apply_link || null,
+      applyOptions: job.apply_options || [],
     }));
 
     res.json({ jobs });
