@@ -46,6 +46,7 @@ const Dashboard: React.FC = () => {
 
     const formData = new FormData();
     formData.append('resume', file);
+    formData.append('userId', user?.id || ''); // Assuming user ID is available)
 
     try {
       const response = await fetch('http://localhost:5000/api/file/upload', {

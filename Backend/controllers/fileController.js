@@ -1,39 +1,71 @@
 const axios = require('axios');
+const FormData = require('form-data');
+const cloudinary = require('cloudinary').v2;
+const db = require('../config/db'); // Assuming you have a db config file
 
-/**
- * Handle in-memory file upload and forward to Python ML backend
- */
 const handleFileUpload = async (req, res) => {
   try {
-    // Check if file exists
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Create FormData to send to Python backend
-    const FormData = require('form-data');
-    const formData = new FormData();
-    console.log('Received file:', req.file);
-    // Append the file buffer with a filename and correct MIME type
-    formData.append('file', req.file.buffer, {
-      filename: req.file.originalname,
-      contentType: req.file.mimetype,
-    });
-    console.log('FormData prepared for file upload');
-    // Send POST request to Python ML backend
-
-    const response = await axios.post('http://localhost:8000/extract-skills', formData, {
-      headers: {
-        ...formData.getHeaders(),
+    // Upload to Cloudinary
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'raw',
+        folder: 'resume',
+        public_id: req.file.originalname.split('.')[0],
+        overwrite: true,
       },
-    });
+      async (error, result) => {
+        if (error) {
+          console.error('Cloudinary upload error:', error);
+          return res.status(500).json({ error: 'Resume upload failed' });
+        }
 
-    // Return the result from ML backend
-    const skills = response.data.skills;
+        const resumeUrl = result.secure_url;
 
-    res.status(200).json({ skills }); 
+        // Send file to Python ML backend to extract skills
+        const formData = new FormData();
+        formData.append('file', req.file.buffer, {
+          filename: req.file.originalname,
+          contentType: req.file.mimetype,
+        });
+
+        const mlResponse = await axios.post(
+          'http://localhost:8000/extract-skills',
+          formData,
+          { headers: { ...formData.getHeaders() } }
+        );
+
+        const skills = mlResponse.data.skills;
+
+        // Insert into resumes table
+        const [resumeInsert] = await db.execute(
+          'INSERT INTO resumes (user_id, resume_url) VALUES (?, ?)',
+          [req.body.userId || null, resumeUrl]
+        );
+
+        const resumeId = resumeInsert.insertId;
+
+        // Insert into job_searches table
+        await db.execute(
+          'INSERT INTO job_searches (resume_id) VALUES (?)',
+          [resumeId]
+        );
+
+        res.status(200).json({
+          message: 'Resume uploaded & skills extracted successfully',
+          resume_url: resumeUrl,
+          skills,
+        });
+      }
+    );
+
+    uploadStream.end(req.file.buffer);
+
   } catch (error) {
-    console.error('Error in fileController:', error.message);
+    console.error('Error in handleFileUpload:', error.message);
     res.status(500).json({ error: 'Server error while processing file' });
   }
 };

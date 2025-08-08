@@ -3,6 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const jobRoutes = require('./routes/jobRoutes');
+const { cloudinaryConnect } = require('./config/cloudinary');
+
+// Connect to Cloudinary
+cloudinaryConnect();
 
 const app = express();
 app.use(cors());
