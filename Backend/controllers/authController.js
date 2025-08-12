@@ -34,40 +34,38 @@ exports.verifyCode = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Insert into database
-    db.query(
+    const [result] = await db.query(
       'INSERT INTO users (name, email, password) VALUES (?, ?, ?)',
-      [name, email, hashedPassword],
-      (err, result) => {
-        if (err) return res.status(500).json({ error: 'DB Error' });
-
-        codes.delete(email);
-
-        // Generate JWT token
-        const token = jwt.sign(
-          { userId: result.insertId, email, name },
-          JWT_SECRET,
-          { expiresIn: '1h' }
-        );
-
-        res.status(201).json({
-          success: true,
-          message: 'User registered successfully',
-          token,
-        });
-      }
+      [name, email, hashedPassword]
     );
+
+    // Remove stored code after successful registration
+    codes.delete(email);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: result.insertId, email, name },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      token,
+    });
   } catch (err) {
+    console.error('Registration error:', err);
     res.status(500).json({ error: 'Server error during registration' });
   }
 };
 
-exports.login = (req, res) => {
+
+exports.login = async (req, res) => {
   const { email, password } = req.body;
 
-  const query = 'SELECT * FROM users WHERE email = ?';
-
-  db.query(query, [email], async (err, results) => {
-    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+  try {
+    const [results] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
 
     if (results.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
@@ -94,5 +92,9 @@ exports.login = (req, res) => {
         email: user.email,
       },
     });
-  });
+
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ success: false, message: 'Database error' });
+  }
 };

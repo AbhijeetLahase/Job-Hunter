@@ -8,6 +8,7 @@ const { cloudinaryConnect } = require('./config/cloudinary');
 // Connect to Cloudinary
 cloudinaryConnect();
 
+
 const app = express();
 app.use(cors());
 app.use(express.json());
